@@ -6,6 +6,7 @@
 
 use strict;
 use warnings;
+use Net::DNS::Header;
 use Net::DNS::Nameserver;
 use Net::DNS::RR::OPT;
 use Net::Server::Daemonize qw(daemonize);
@@ -18,8 +19,8 @@ sub reply_handler {
     my ( $qname, $qclass, $qtype, $peerhost, $query, $conn ) = @_;
     my ( $rcode, @ans, @auth, @add );
 
-    #    print "Received query from $peerhost to " . $conn->{sockhost} . "\n";
-    #    $query->print;
+#    print "Received query from $peerhost to " . $conn->{sockhost} . "\n";
+#    $query->print;
 
     if ( $qtype eq "TXT" && $qname eq "dnssrc.fibrecat.org" ) {
         my ( $ttl, $rdata ) = ( 0, $peerhost );
@@ -47,6 +48,14 @@ sub reply_handler {
     }
     elsif ( $qtype eq "TXT" && $qname eq "dnssock.fibrecat.org" ) {
         my $output = $peerhost . "." . $conn->{"peerport"};
+        my ( $ttl, $rdata ) = ( 0, $output );
+        my $rr = new Net::DNS::RR("$qname $ttl $qclass $qtype $rdata");
+        push @ans, $rr;
+        $rcode = "NOERROR";
+    }
+    elsif ( $qtype eq "TXT" && $qname eq "dnsportandid.fibrecat.org" ) {
+    	my $output = "Port: " . $conn->{"peerport"} . " DNSID: " . $query->header->id;
+	print $output;
         my ( $ttl, $rdata ) = ( 0, $output );
         my $rr = new Net::DNS::RR("$qname $ttl $qclass $qtype $rdata");
         push @ans, $rr;
