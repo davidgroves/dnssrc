@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # Copyright David Groves.
-# This program is free software; you can redistribute it and/or modify it 
+# This program is free software; you can redistribute it and/or modify it
 # under the same terms as Perl 5.14 itself.
 
 use strict;
@@ -11,6 +11,9 @@ use Net::DNS::Nameserver;
 use Net::DNS::RR::OPT;
 use Net::Server::Daemonize qw(daemonize);
 use Net::IP;
+use Net::IPAddress 'num2ip';
+use Net::IPv6Addr 'to_bigint';
+use Math::BigInt;
 use String::Random;
 use Time::HiRes;
 use Data::Dumper;
@@ -19,10 +22,34 @@ sub reply_handler {
     my ( $qname, $qclass, $qtype, $peerhost, $query, $conn ) = @_;
     my ( $rcode, @ans, @auth, @add );
 
-#    print "Received query from $peerhost to " . $conn->{sockhost} . "\n";
-#    $query->print;
+    #print "Received query from $peerhost to " . $conn->{sockhost} . "\n";
+    #$query->print;
 
-    if ( $qtype eq "TXT" && $qname eq "dnssrc.fibrecat.org" ) {
+    if ( $qtype eq "A" && $qname eq "dnssrca.fibrecat.org" ) {
+        if ( index($peerhost, ":") != -1) {
+            # The reply is IPv6, we need to do the special thing
+            my $foo = Net::IPv6Addr->new ($peerhost)->to_bigint;
+            my $foobin = $foo->to_bin();
+            $foobin=~s/^0b//g;
+            my @bar = unpack("(A32)*", $foobin);
+
+            foreach (@bar) {
+                my $unpacked = unpack("N", pack("B32", substr("0" x 32 . $_, -32))) . "\n";
+                my $lip = num2ip($unpacked);
+                my ( $ttl, $rdata ) = ( 0, $lip);
+                my $rr = new Net::DNS::RR("$qname $ttl $qclass $qtype $rdata");
+                push @ans, $rr;
+            }
+            $rcode = "NOERROR";
+        }
+        else {
+            my ( $ttl, $rdata ) = ( 0, $peerhost );
+            my $rr = new Net::DNS::RR("$qname $ttl $qclass $qtype $rdata");
+            push @ans, $rr;
+            $rcode = "NOERROR";
+        }
+    }
+    elsif ((( $qtype eq "TXT") || ( $qtype eq "A" )) && $qname eq "dnssrc.fibrecat.org" ) {
         my ( $ttl, $rdata ) = ( 0, $peerhost );
         my $rr = new Net::DNS::RR("$qname $ttl $qclass $qtype $rdata");
         push @ans, $rr;
@@ -54,8 +81,7 @@ sub reply_handler {
         $rcode = "NOERROR";
     }
     elsif ( $qtype eq "TXT" && $qname eq "dnsportandid.fibrecat.org" ) {
-    	my $output = "Port: " . $conn->{"peerport"} . " DNSID: " . $query->header->id;
-	print $output;
+        my $output = "Port: " . $conn->{"peerport"} . " DNSID: " . $query->header->id;
         my ( $ttl, $rdata ) = ( 0, $output );
         my $rr = new Net::DNS::RR("$qname $ttl $qclass $qtype $rdata");
         push @ans, $rr;
@@ -107,7 +133,7 @@ sub reply_handler {
 }
 
 my $ns = new Net::DNS::Nameserver(
-    LocalAddr    => [ '2001:4db0:10:7::53', '85.236.110.130' ],
+    LocalAddr    => [ '51.89.165.88', '2001:41d0:801:2000::2944' ],
     LocalPort    => 53,
     ReplyHandler => \&reply_handler,
     Verbose      => 0
