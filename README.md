@@ -129,3 +129,6 @@ Pull requests happily accepted, particularly for open issues in the issue tracke
 
 Any other feedback, pls email me using my name (any variant) @ the domain used in the examples above.
 Apologies for the less than simple instructions, but I'm trying to keep my inbox clean.
+
+This is my first major bit of rust code, so it is likely to be somewhat non-ideomatic, and I
+intend to revist this as I learn the language more.
