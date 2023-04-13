@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'dnssrc'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=dnssrc",
+                    "--package=dnssrc"
+                ],
+                "filter": {
+                    "name": "dnssrc",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "-u127.0.0.1:1053",
+                "-u[::1]:1053",
+                "-t127.0.0.1:1053",
+                "-t[::1]:1053"
+            ],
+            "cwd": "${workspaceFolder}"
+            // Environment variables passed to the program.
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'dnssrc'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=dnssrc",
+                    "--package=dnssrc"
+                ],
+                "filter": {
+                    "name": "dnssrc",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
