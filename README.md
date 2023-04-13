@@ -60,15 +60,15 @@ to the binary, it will work as expected. To do this, run `setcap 'cap_net_bind_s
 ## Simple Examples
 
 - Listen on UDP, port 53, for IPv4 on localhost only.
-  - `dnssrc --domain mydomain.com --udp 127.0.0.1:53`
+  - `dnssrc --domain mydomain.com --udp 127.0.0.1:53 --foreground`
 - Listen on TCP, port 53, for IPv6 on localhost only.
-  - `dnssrc --domain mydomain.com --tcp6 [::1]:53`
+  - `dnssrc --domain mydomain.com --tcp6 [::1]:53  --foreground`
 - Listen on UDP, port 53, on all interfaces.
-  - `dnssrc --domain mydomain.com --udp 0.0.0.0:53`
+  - `dnssrc --domain mydomain.com --udp 0.0.0.0:53 --foreground`
 - Listen on UDP, port 53, on two interfaces. One with address 192.168.1.1 and the other with 192.168.2.1.
-  - `dnssrc --domain mydomain.com --udp 192.168.1.1 --udp 192.168.2.1`
+  - `dnssrc --domain mydomain.com --udp 192.168.1.1 --udp 192.168.2.1  --foreground`
 - Listen on UDP port 53 for IPv4 on localhost only, and TCP port 443 for DNS over HTTPS on localhost only.
-  - `dnssrc --domain mydomain.com --udp 127.1:53 --tcp6 [::1]:443`
+  - `dnssrc --domain mydomain.com --udp 127.1:53 --tcp6 [::1]:443  --foreground`
 
 ## TLS
 
@@ -98,7 +98,7 @@ an example of the full name to use is `myip.dnssrc.fibrecat.org`
 | edns-cs | TXT     | Returns the EDNS-Client-Subnet option on the incoming request.                |
 
 For example, if you invoked `dnssrc` running on 127.0.0.1:1053 for UDP requests with 
-`dnssrc --domain mydomain.com --udp 127.0.0.1:1053` and you wanted to confirm your requests to it came
+`dnssrc --domain mydomain.com --udp 127.0.0.1:1053 --foreground` and you wanted to confirm your requests to it came
 from 127.0.0.1, you could run
 
 ```
