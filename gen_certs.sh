@@ -31,14 +31,14 @@ C = GB
 ST = Scotland
 L = Glasgow
 O = DNSSRC
-CN = root.fibrecat.org
+CN = rootcert.fibrecat.org
 
 [req_ext]
 basicConstraints = critical,CA:TRUE
 subjectAltName = @alt_names
  
 [alt_names]
-DNS.1 = root.fibrecat.org
+DNS.1 = rootcert0.fibrecat.org
 EOF
 
 # CA

@@ -44,6 +44,8 @@ pub struct Handler {
     pub random_zone: LowerName,
     pub edns_zone: LowerName,
     pub ednscs_zone: LowerName,
+    pub timestamp_zone: LowerName,
+    pub timestamp0_zone: LowerName,
     pub ttl: u32,
 }
 
@@ -88,6 +90,8 @@ impl Handler {
             random_zone: LowerName::from(Name::from_str(&format!("random.{domain}")).unwrap()),
             edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap()),
             ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap()),
+            timestamp_zone: LowerName::from(Name::from_str(&format!("timestamp.{domain}")).unwrap()),
+            timestamp0_zone: LowerName::from(Name::from_str(&format!("timestamp0.{domain}")).unwrap()),
             ttl: options.ttl,
             // hexdump_zone: LowerName::from(Name::from_str(&format!("hexdump.{domain}")).unwrap()),
         }
@@ -156,6 +160,32 @@ impl Handler {
         header.set_authoritative(true);
         let rdata = RData::TXT(TXT::new(vec![counter.to_string()]));
         let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        Ok(responder.send_response(response).await?)
+    }
+
+    async fn do_handle_request_timestamp<R: ResponseHandler>(
+        &self,
+        request: &Request,
+        mut responder: R,
+        ttlzero: bool
+    ) -> Result<ResponseInfo, Error> {
+        let builder = MessageResponseBuilder::from_message_request(request);
+        let mut header = Header::response_from_request(request.header());
+        header.set_authoritative(true);
+        let start = std::time::SystemTime::now();
+        let since_the_epoch = start
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("Time went backwards");
+        let timestamp = since_the_epoch.as_millis();
+        let str_timestamp = format!("{}", timestamp);
+        let rdata = RData::TXT(TXT::new(vec![str_timestamp]));
+        println!("{}", request.query().name().base_name());
+        let ttl = match ttlzero {
+            true => 0,
+            false => self.ttl
+        };
+        let records = vec![Record::from_rdata(request.query().name().into(), ttl, rdata)];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
@@ -289,9 +319,17 @@ impl Handler {
             name if self.ednscs_zone.zone_of(name) => {
                 self.do_handle_request_ednscs(request, response).await
             }
+            name if self.timestamp_zone.zone_of(name) => {
+                self.do_handle_request_timestamp(request, response, false).await
+            }
+            name if self.timestamp0_zone.zone_of(name) => {
+                self.do_handle_request_timestamp(request, response, true).await
+            }
+            
             name if self.root_zone.zone_of(name) => {
                 self.do_handle_request_default(request, response).await
             }
+            
             name => Err(Error::InvalidZone(name.clone())),
         }
     }

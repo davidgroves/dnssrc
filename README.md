@@ -5,7 +5,7 @@
 
 # Aims
 
-Provide tools for testing how an upstream resolvers backend resolves names. This can be useful for multiple reasons including :-
+Provide a DNS server testing how an upstream resolvers backend resolves names. This can be useful for multiple reasons including :-
 
 - Diagnose CDN site selection for specific clients.
 - Verifying the DNS Security position of that resolver.
@@ -61,6 +61,8 @@ to the binary, it will work as expected. To do this, run `setcap 'cap_net_bind_s
 
 - Listen on UDP, port 53, for IPv4 on localhost only.
   - `dnssrc --domain mydomain.com --udp 127.0.0.1:53 --foreground`
+- Listen on UDP, port 53, for IPv4 on localhost only (using env variables)
+  - `EXPORT DNSSRC_UDP_ADDR="127.0.0.1:53"; export DNSSRC_DOMAIN="mydomain.com"; export DNSSRC_FOREGROUND=True; dnssrc`
 - Listen on TCP, port 53, for IPv6 on localhost only.
   - `dnssrc --domain mydomain.com --tcp6 [::1]:53  --foreground`
 - Listen on UDP, port 53, on all interfaces.
@@ -87,15 +89,18 @@ produce in the `tls/` directory.
 `dnssrc` will accept queries for the following records. If you are using the public instance, 
 an example of the full name to use is `myip.dnssrc.fibrecat.org`
 
-| Name    | Type    | Purpose                                                                       |
-|---------|---------|-------------------------------------------------------------------------------|
-| myip    | A/AAAA  | Returns an A or AAAA record, of the source address of the incoming request.   |
-| myport  | TXT     | Returns a TXT record with the source port of the incoming request.            |
-| myaddr  | TXT     | Returns two TXT records, with both the source address and the source port.    |
-| counter | TXT     | Returns a counter that is incremented once with each request served.          |
-| random  | TXT     | Returns a random alphanumeric string. Useful for testing caching on clusters. |
-| edns    | TXT     | Returns the EDNS client options on the incoming request.                      |
-| edns-cs | TXT     | Returns the EDNS-Client-Subnet option on the incoming request.                |
+| Name      | Type    | Purpose                                                                       |
+|---------  |---------|-------------------------------------------------------------------------------|
+| myip      | A/AAAA  | Returns an A or AAAA record, of the source address of the incoming request.   |
+| myport    | TXT     | Returns a TXT record with the source port of the incoming request.            |
+| myaddr    | TXT     | Returns two TXT records, with both the source address and the source port.    |
+| counter   | TXT     | Returns a counter that is incremented once with each request served.          |
+| random    | A/AAAA/TXT     | Returns a random alphanumeric string. Useful for testing caching on clusters. |
+| edns      | TXT     | Returns the EDNS client options on the incoming request.                      |
+| edns-cs   | TXT     | Returns the EDNS-Client-Subnet option on the incoming request.                |
+| timestamp | TXT     | Returns the current timestamp, in milliseconds from unix epoch, when the server got the request. TTL is still respected. |
+| timestamp0 | TXT     | Returns the current timestamp, in milliseconds from unix epoch, when the server got the request. TTL is always set to zero. |
+
 
 For example, if you invoked `dnssrc` running on 127.0.0.1:1053 for UDP requests with 
 `dnssrc --domain mydomain.com --udp 127.0.0.1:1053 --foreground` and you wanted to confirm your requests to it came
