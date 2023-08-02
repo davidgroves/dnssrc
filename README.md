@@ -14,7 +14,7 @@ Provide a DNS server testing how an upstream resolvers backend resolves names. T
 - Verify how many servers exist behind a load balanced client address.
 - Verify Anycast is directing you to the correct nodes.
 
-This tool was originally written in Perl, but has been rewritten in Rust for easier ongoing maintenence and the additon.
+This tool was originally written in Perl, but has been rewritten in Rust for easier ongoing maintenence and the additon of new features.
 
 # Building and Running DNSSRC.
 
