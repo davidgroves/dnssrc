@@ -31,6 +31,8 @@ base directory. Your binary will be located at `target/release/dnssrc`.
 
 If you need to build a statically linked binary, you should read [David Vassallo's blog](https://blog.davidvassallo.me/2021/06/10/lessons-learned-building-statically-linked-rust-binaries-openssl/).
 
+Builds are known to work on x86, amd64 and aarch64.
+
 ## How to Run.
 
 Once you have produced binaries, you simply need to run it. The binary will be in the usual rust
