@@ -9,6 +9,13 @@ use std::net::SocketAddr;
         .multiple(true)
         .required(true)
 ))]
+#[command(group(
+    ArgGroup::new("records")
+        .args(["ns_records", "soa_names"])
+        .multiple(true)
+        .required(true)
+))]
+
 pub struct Options {
     // UDP socket to listen on.
     #[clap(long, env = "DNSSRC_UDP_ADDR")]

@@ -145,5 +145,5 @@ This is my first major bit of rust code, so it is likely to be somewhat non-ideo
 intend to revist this as I learn the language more.
 
 # Known Bugs
-- NS_records are hardcoded to only allow two entires. Using 1 will crash the problem, running 3 or more will be ignored.
-- SOA generation is totally hardcoded.
+
+- Background mode appears unreliable. More diagnosis needed.
