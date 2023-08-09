@@ -1,6 +1,7 @@
 use crate::Options;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
+
 use std::{
     net::IpAddr,
     str::FromStr,
@@ -19,6 +20,9 @@ use trust_dns_server::{
     },
     server::{Request, RequestHandler, ResponseHandler, ResponseInfo},
 };
+
+use trust_dns_proto::rr::rdata::soa::SOA;
+
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -47,6 +51,7 @@ pub struct Handler {
     pub timestamp_zone: LowerName,
     pub timestamp0_zone: LowerName,
     pub ttl: u32,
+    pub ns_names: Vec<String>
 }
 
 fn parse_ednscs_subnet(v: Vec<u8>) -> ipnet::IpNet {
@@ -93,6 +98,7 @@ impl Handler {
             timestamp_zone: LowerName::from(Name::from_str(&format!("timestamp.{domain}")).unwrap()),
             timestamp0_zone: LowerName::from(Name::from_str(&format!("timestamp0.{domain}")).unwrap()),
             ttl: options.ttl,
+            ns_names: options.ns_records.clone()
             // hexdump_zone: LowerName::from(Name::from_str(&format!("hexdump.{domain}")).unwrap()),
         }
     }
@@ -270,17 +276,30 @@ impl Handler {
         Ok(responder.send_response(response).await?)
     }
 
-    async fn do_handle_request_default<R: ResponseHandler>(
+    async fn do_handle_request_rootzone<R: ResponseHandler>(
         &self,
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
+        let header = Header::response_from_request(request.header());
         let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
-        header.set_response_code(ResponseCode::NXDomain);
-        let response = builder.build_no_records(header);
+        let response;
+        let records;
+
+        if request.query().query_type().is_ns() {
+            let rdata1 = RData::NS(Name::from_str(&self.ns_names[0]).unwrap());
+            let rdata2 = RData::NS(Name::from_str(&self.ns_names[1]).unwrap());
+            records = vec![Record::from_rdata(request.query().name().into(), 60, rdata1), Record::from_rdata(request.query().name().into(), 60, rdata2)];
+            response = builder.build(header, &records, &[], &[], &[]);
+        }
+        else if request.query().query_type().is_soa() {
+            let rdata = RData::SOA(SOA::new(Name::from_str("foo").unwrap(), Name::from_str("bar").unwrap(), 1000, 60, 60, 9999999, 0));
+            records = vec![Record::from_rdata(request.query().name().into(), 60, rdata)];
+            response = builder.build(header, &records, &[], &[], &[]);
+        }
+        else {
+            response = builder.build(header, &[], &[], &[], &[]);
+        }
         Ok(responder.send_response(response).await?)
     }
 
@@ -325,9 +344,8 @@ impl Handler {
             name if self.timestamp0_zone.zone_of(name) => {
                 self.do_handle_request_timestamp(request, response, true).await
             }
-            
             name if self.root_zone.zone_of(name) => {
-                self.do_handle_request_default(request, response).await
+                self.do_handle_request_rootzone(request, response).await
             }
             
             name => Err(Error::InvalidZone(name.clone())),

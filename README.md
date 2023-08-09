@@ -82,6 +82,10 @@ You do so with the `--certfile` option to provide a PEM formatted certificate an
 The script `gen_certs.sh` will produce these files signed my a local certificate authority it will also
 produce in the `tls/` directory.
 
+## DNSSEC
+
+If you want 
+
 # Sending Queries to DNSSRC.
 
 ## What query names can dnssrc handle.

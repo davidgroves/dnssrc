@@ -90,5 +90,10 @@ pub struct Options {
 
     // Force Foreground
     #[clap(long, env = "DNSSRC_FOREGROUND")]
-    pub foreground: bool
+    pub foreground: bool,
+
+    // NS records
+    #[clap(long, env = "NS_RECORDS")]
+    #[arg(num_args(0..))]
+    pub ns_records: Vec<String>,
 }

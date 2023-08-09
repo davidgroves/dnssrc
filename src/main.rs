@@ -147,7 +147,7 @@ async fn main() -> Result<()> {
             options.domain.clone(),
         );
     }
-
+    
     // Drop privileges if I'm run as root.
     let mut running_as_root = false;
     unsafe {
