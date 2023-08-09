@@ -96,4 +96,9 @@ pub struct Options {
     #[clap(long, env = "NS_RECORDS")]
     #[arg(num_args(0..))]
     pub ns_records: Vec<String>,
+
+    // SOA Names
+    #[clap(long, env = "SOA_NAMES")]
+    #[arg(num_args(0..))]
+    pub soa_names: Vec<String>,
 }

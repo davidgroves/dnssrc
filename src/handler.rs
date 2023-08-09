@@ -51,7 +51,8 @@ pub struct Handler {
     pub timestamp_zone: LowerName,
     pub timestamp0_zone: LowerName,
     pub ttl: u32,
-    pub ns_names: Vec<String>
+    pub ns_names: Vec<String>,
+    pub soa_names: Vec<String>,
 }
 
 fn parse_ednscs_subnet(v: Vec<u8>) -> ipnet::IpNet {
@@ -98,7 +99,8 @@ impl Handler {
             timestamp_zone: LowerName::from(Name::from_str(&format!("timestamp.{domain}")).unwrap()),
             timestamp0_zone: LowerName::from(Name::from_str(&format!("timestamp0.{domain}")).unwrap()),
             ttl: options.ttl,
-            ns_names: options.ns_records.clone()
+            ns_names: options.ns_records.clone(),
+            soa_names: options.soa_names.clone(),
             // hexdump_zone: LowerName::from(Name::from_str(&format!("hexdump.{domain}")).unwrap()),
         }
     }
@@ -284,22 +286,27 @@ impl Handler {
         let header = Header::response_from_request(request.header());
         let builder = MessageResponseBuilder::from_message_request(request);
         let response;
-        let records;
+        let mut records = vec![];
 
         if request.query().query_type().is_ns() {
-            let rdata1 = RData::NS(Name::from_str(&self.ns_names[0]).unwrap());
-            let rdata2 = RData::NS(Name::from_str(&self.ns_names[1]).unwrap());
-            records = vec![Record::from_rdata(request.query().name().into(), 60, rdata1), Record::from_rdata(request.query().name().into(), 60, rdata2)];
+            let mut rdatas = vec![];
+            for ns_name in self.ns_names.clone().into_iter() {
+                rdatas.push(RData::NS(Name::from_str(&ns_name).unwrap()));
+            }
+            for rdata in rdatas {
+                records.push(Record::from_rdata(request.query().name().into(), 60, rdata))
+            }
             response = builder.build(header, &records, &[], &[], &[]);
         }
         else if request.query().query_type().is_soa() {
-            let rdata = RData::SOA(SOA::new(Name::from_str("foo").unwrap(), Name::from_str("bar").unwrap(), 1000, 60, 60, 9999999, 0));
+            let rdata = RData::SOA(SOA::new(Name::from_str_relaxed(&self.soa_names[0]).unwrap(), Name::from_str_relaxed(&self.soa_names[1]).unwrap(), 1000, 60, 60, 31356000, 0));
             records = vec![Record::from_rdata(request.query().name().into(), 60, rdata)];
             response = builder.build(header, &records, &[], &[], &[]);
         }
         else {
             response = builder.build(header, &[], &[], &[], &[]);
         }
+
         Ok(responder.send_response(response).await?)
     }
 

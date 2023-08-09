@@ -143,3 +143,7 @@ Apologies for the less than simple instructions, but I'm trying to keep my inbox
 
 This is my first major bit of rust code, so it is likely to be somewhat non-ideomatic, and I
 intend to revist this as I learn the language more.
+
+# Known Bugs
+- NS_records are hardcoded to only allow two entires. Using 1 will crash the problem, running 3 or more will be ignored.
+- SOA generation is totally hardcoded.
