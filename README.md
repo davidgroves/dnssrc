@@ -128,8 +128,11 @@ For full support, I recommend installing at least version 3.2 from [knot-dns's g
   - `kdig -d -p 10443 +https +tls +tls-sni=dnssrc.fibrecat.org @127.1 myip.dnssrc.fibrecat.org`
 - DNS over QUIC
   - `kdig -d -p 10443 +tls-sni=dnssrc.fibrecat.org +quic @127.1 myip.dnssrc.fibrecat.org`
+- EDNS Data
+  - `kdig -d TXT edns.dnssrc.fibrecat.org`
 - EDNS Client Subnet
-  - `kdig -d -p 1053 +subnet 192.168.0.0/16 @127.1 edns.dnssrc.fibrecat.org`
+  - `kdig -d TXT edns-cs.dnssrc.fibrecat.org`
+
 # How to contribute.
 
 Pull requests happily accepted, particularly for open issues in the issue tracker.
@@ -143,3 +146,4 @@ intend to revist this as I learn the language more.
 # Known Bugs
 
 - Background mode appears unreliable. More diagnosis needed.
+- The public version running at dnssrc.fibrecat.org does support DNS over HTTPS at current time.
