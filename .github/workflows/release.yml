@@ -1,6 +1,0 @@
-- name: Create GitHub Releases based on changelog
-  uses: taiki-e/create-gh-release-action@v1.8.2
-
-- name: Build and upload Rust binary to GitHub Releases
-  uses: taiki-e/upload-rust-binary-action@v1.20.0
-
