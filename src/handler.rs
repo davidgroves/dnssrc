@@ -44,6 +44,7 @@ pub struct Handler {
     pub myip_zone: LowerName,
     pub myport_zone: LowerName,
     pub myaddr_zone: LowerName,
+    pub help_zone: LowerName,
     pub random_zone: LowerName,
     pub edns_zone: LowerName,
     pub ednscs_zone: LowerName,
@@ -102,6 +103,7 @@ impl Handler {
             myip_zone: LowerName::from(Name::from_str(&format!("myip.{domain}")).unwrap()),
             myport_zone: LowerName::from(Name::from_str(&format!("myport.{domain}")).unwrap()),
             myaddr_zone: LowerName::from(Name::from_str(&format!("myaddr.{domain}")).unwrap()),
+            help_zone: LowerName::from(Name::from_str(&format!("help.{domain}")).unwrap()),
             random_zone: LowerName::from(Name::from_str(&format!("random.{domain}")).unwrap()),
             edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap()),
             ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap()),
@@ -171,6 +173,28 @@ impl Handler {
         let string_response = vec![
             request.src().ip().to_string(),
             request.src().port().to_string(),
+        ];
+        let rdata = RData::TXT(TXT::new(string_response));
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
+        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        Ok(responder.send_response(response).await?)
+    }
+
+    async fn do_handle_request_help<R: ResponseHandler>(
+        &self,
+        request: &Request,
+        mut responder: R,
+    ) -> Result<ResponseInfo, Error> {
+        self.counter.fetch_add(1, Ordering::SeqCst);
+        let builder = MessageResponseBuilder::from_message_request(request);
+        let mut header = Header::response_from_request(request.header());
+        header.set_authoritative(true);
+        let string_response = vec![
+            "Available queries are: myip/A/AAAA/TXT, myport/TXT, myaddr/ANY, counter/TXT, random/A/AAAA/TXT, edns/A/AAAA/TXT, ednscs/A/AAAA, timestamp/TXT, timestamp0/TXT, help/ANY".to_string()
         ];
         let rdata = RData::TXT(TXT::new(string_response));
         let records = vec![Record::from_rdata(
@@ -386,6 +410,9 @@ impl Handler {
             }
             name if self.myaddr_zone.zone_of(name) => {
                 self.do_handle_request_myaddr(request, response).await
+            }
+            name if self.help_zone.zone_of(name) => {
+                self.do_handle_request_help(request, response).await
             }
             name if self.random_zone.zone_of(name) => {
                 self.do_handle_request_random(request, response).await
