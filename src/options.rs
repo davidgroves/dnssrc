@@ -100,12 +100,15 @@ pub struct Options {
     pub foreground: bool,
 
     // NS records
-    #[clap(long, env = "NS_RECORDS")]
+    #[clap(long, env = "NS_RECORDS", default_value=None)]
     #[arg(num_args(1))]
     pub ns_records: Vec<String>,
 
     // SOA Names
-    #[clap(long, env = "SOA_NAMES")]
-    #[arg(num_args(2))]
+    #[clap(long, env = "SOA_NAMES", default_value = "foo bar", num_args = 2, value_delimiter = ' ')]
     pub soa_names: Vec<String>,
+
+    // SOA Values
+    #[clap(long, env = "SOA_VALUES", default_value = "1 60 60 31356000 0", num_args = 5, value_delimiter = ' ')]
+    pub soa_values: Vec<u32>,
 }
