@@ -13,7 +13,7 @@ use std::net::SocketAddr;
     ArgGroup::new("records")
         .args(["ns_records", "soa_names"])
         .multiple(true)
-        .required(true)
+        .required(false)
 ))]
 
 pub struct Options {
@@ -100,15 +100,14 @@ pub struct Options {
     pub foreground: bool,
 
     // NS records
-    #[clap(long, env = "NS_RECORDS", default_value=None)]
-    #[arg(num_args(1))]
+    #[clap(long, env = "NS_RECORDS", num_args = 1.., default_value="ns0")]
     pub ns_records: Vec<String>,
 
     // SOA Names
-    #[clap(long, env = "SOA_NAMES", default_value = "foo bar", num_args = 2, value_delimiter = ' ')]
+    #[clap(long, env = "SOA_NAMES", default_value = "foo bar", num_args = 2.., value_delimiter = ' ', default_value("foo bar"), required = false)]
     pub soa_names: Vec<String>,
 
     // SOA Values
-    #[clap(long, env = "SOA_VALUES", default_value = "1 60 60 31356000 0", num_args = 5, value_delimiter = ' ')]
+    #[clap(long, env = "SOA_VALUES", default_value = "1 60 60 31356000 0", num_args = 5, value_delimiter = ' ', default_value("1 60 60 86400 86400"), required = false)]
     pub soa_values: Vec<u32>,
 }

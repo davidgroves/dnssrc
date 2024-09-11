@@ -74,6 +74,14 @@ to the binary, it will work as expected. To do this, run `setcap 'cap_net_bind_s
 - Listen on UDP port 53 for IPv4 on localhost only, and TCP port 443 for DNS over HTTPS on localhost only.
   - `dnssrc --domain mydomain.com --udp 127.1:53 --tcp6 [::1]:443  --foreground`
 
+## Optonal Extras
+ - You can specify the nameserver records to use for the base zone with the `--ns_records` option.
+   - `dnssrc --domain mydomain.com --udp 127.0.0.1:53 --ns_records ns0.mydomain.com ns1.mydomain.com --foreground`
+ - You can specify the SOA names and values with the `--soa_names` and `--soa_values` options.
+   - The first option to `soa_names` is the MNAME, the second is the RNAME.
+   - The options to `soa_values` are the serial, refresh, retry, expire and minimum.
+   - `dnssrc --domain mydomain.com --udp 127.0.0.1:53 --soa_names foo.mydomain.com bar.mydomain.com --soa_values 1 60 60 31356000 0 --foreground`
+
 ## TLS
 
 For DNS over HTTPS `--doh / --doh6`, DNS over QUIC `--quic / --quic6` or DNS over TLS `--tls / --tls6`,
@@ -146,4 +154,4 @@ intend to revist this as I learn the language more.
 # Known Bugs
 
 - Background mode appears unreliable. More diagnosis needed.
-- The public version running at dnssrc.fibrecat.org does support DNS over HTTPS at current time.
+- The public version running at dnssrc.fibrecat.org does not support DNS over HTTPS at current time.
