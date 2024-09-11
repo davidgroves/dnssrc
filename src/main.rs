@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use daemonize::Daemonize;
-use handler::{Handler};
+use handler::Handler;
 use options::Options;
 use privdrop::PrivDrop;
 use std::time::Duration;
@@ -147,7 +147,7 @@ async fn main() -> Result<()> {
             options.domain.clone(),
         );
     }
-    
+
     // Drop privileges if I'm run as root.
     let mut running_as_root = false;
     unsafe {
@@ -168,7 +168,7 @@ async fn main() -> Result<()> {
         true => {
             // run the server code in the foreground
             let _ = server.block_until_done().await;
-        },
+        }
         false => {
             // daemonize before running
             let daemon = Daemonize::new();

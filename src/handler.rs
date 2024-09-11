@@ -23,7 +23,6 @@ use trust_dns_server::{
 
 use trust_dns_proto::rr::rdata::soa::SOA;
 
-
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Invalid OpCode {0:}")]
@@ -63,27 +62,37 @@ fn parse_ednscs_subnet(v: Vec<u8>) -> ipnet::IpNet {
         // Spec say this shouldn't ever exist, but it does in the wild from some software.
         // I think the meaning is "I'm aware of EDNS-CS" but don't want to use it for this request.
         todo!()
-    }
-    else if family == 1 {
+    } else if family == 1 {
         let mut x = v;
-        x.resize(8,0);
-        let addr = ipnet::IpNet::new(std::net::IpAddr::V4(std::net::Ipv4Addr::new(x[4], x[5], x[6], x[7])), prefix_length).unwrap();
+        x.resize(8, 0);
+        let addr = ipnet::IpNet::new(
+            std::net::IpAddr::V4(std::net::Ipv4Addr::new(x[4], x[5], x[6], x[7])),
+            prefix_length,
+        )
+        .unwrap();
         return addr;
-    }
-    else if family == 2 {
+    } else if family == 2 {
         let mut x = v;
         x.resize(20, 0);
-        let x: Vec<u16> = x.chunks_exact(2).map(|a| u16::from_be_bytes([a[0], a[1]])).collect();
-        let addr = ipnet::IpNet::new(std::net::IpAddr::V6(std::net::Ipv6Addr::new(x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9])), prefix_length).unwrap();
+        let x: Vec<u16> = x
+            .chunks_exact(2)
+            .map(|a| u16::from_be_bytes([a[0], a[1]]))
+            .collect();
+        let addr = ipnet::IpNet::new(
+            std::net::IpAddr::V6(std::net::Ipv6Addr::new(
+                x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9],
+            )),
+            prefix_length,
+        )
+        .unwrap();
         return addr;
-    }
-    else {
+    } else {
         todo!("Bad ednscs data: {:?}", v);
     }
 }
 
 impl Handler {
-     /// Create new handler from command-line options.
+    /// Create new handler from command-line options.
     pub fn from_options(options: &Options) -> Self {
         let domain = &options.domain;
         Handler {
@@ -96,8 +105,12 @@ impl Handler {
             random_zone: LowerName::from(Name::from_str(&format!("random.{domain}")).unwrap()),
             edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap()),
             ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap()),
-            timestamp_zone: LowerName::from(Name::from_str(&format!("timestamp.{domain}")).unwrap()),
-            timestamp0_zone: LowerName::from(Name::from_str(&format!("timestamp0.{domain}")).unwrap()),
+            timestamp_zone: LowerName::from(
+                Name::from_str(&format!("timestamp.{domain}")).unwrap(),
+            ),
+            timestamp0_zone: LowerName::from(
+                Name::from_str(&format!("timestamp0.{domain}")).unwrap(),
+            ),
             ttl: options.ttl,
             ns_names: options.ns_records.clone(),
             soa_names: options.soa_names.clone(),
@@ -118,7 +131,11 @@ impl Handler {
             IpAddr::V4(ipv4) => RData::A(ipv4),
             IpAddr::V6(ipv6) => RData::AAAA(ipv6),
         };
-        let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
@@ -133,7 +150,11 @@ impl Handler {
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
         let rdata = RData::TXT(TXT::new(vec![request.src().port().to_string()]));
-        let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
@@ -152,7 +173,11 @@ impl Handler {
             request.src().port().to_string(),
         ];
         let rdata = RData::TXT(TXT::new(string_response));
-        let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
@@ -167,7 +192,11 @@ impl Handler {
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
         let rdata = RData::TXT(TXT::new(vec![counter.to_string()]));
-        let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
@@ -176,7 +205,7 @@ impl Handler {
         &self,
         request: &Request,
         mut responder: R,
-        ttlzero: bool
+        ttlzero: bool,
     ) -> Result<ResponseInfo, Error> {
         let builder = MessageResponseBuilder::from_message_request(request);
         let mut header = Header::response_from_request(request.header());
@@ -191,9 +220,13 @@ impl Handler {
         println!("{}", request.query().name().base_name());
         let ttl = match ttlzero {
             true => 0,
-            false => self.ttl
+            false => self.ttl,
         };
-        let records = vec![Record::from_rdata(request.query().name().into(), ttl, rdata)];
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            ttl,
+            rdata,
+        )];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
@@ -208,7 +241,11 @@ impl Handler {
         let edns = request.edns().unwrap();
         header.set_authoritative(true);
         let rdata = RData::TXT(TXT::new(vec![edns.to_string()]));
-        let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
@@ -231,11 +268,15 @@ impl Handler {
 
         let net = parse_ednscs_subnet(ednscs);
         let rdata = RData::TXT(TXT::new(vec![net.to_string()]));
-        let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
-  
+
     async fn do_handle_request_random<R: ResponseHandler>(
         &self,
         request: &Request,
@@ -273,7 +314,11 @@ impl Handler {
             )])),
         };
 
-        let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
         let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
@@ -297,13 +342,19 @@ impl Handler {
                 records.push(Record::from_rdata(request.query().name().into(), 60, rdata))
             }
             response = builder.build(header, &records, &[], &[], &[]);
-        }
-        else if request.query().query_type().is_soa() {
-            let rdata = RData::SOA(SOA::new(Name::from_str_relaxed(&self.soa_names[0]).unwrap(), Name::from_str_relaxed(&self.soa_names[1]).unwrap(), 1000, 60, 60, 31356000, 0));
+        } else if request.query().query_type().is_soa() {
+            let rdata = RData::SOA(SOA::new(
+                Name::from_str_relaxed(&self.soa_names[0]).unwrap(),
+                Name::from_str_relaxed(&self.soa_names[1]).unwrap(),
+                1000,
+                60,
+                60,
+                31356000,
+                0,
+            ));
             records = vec![Record::from_rdata(request.query().name().into(), 60, rdata)];
             response = builder.build(header, &records, &[], &[], &[]);
-        }
-        else {
+        } else {
             response = builder.build(header, &[], &[], &[], &[]);
         }
 
@@ -346,15 +397,17 @@ impl Handler {
                 self.do_handle_request_ednscs(request, response).await
             }
             name if self.timestamp_zone.zone_of(name) => {
-                self.do_handle_request_timestamp(request, response, false).await
+                self.do_handle_request_timestamp(request, response, false)
+                    .await
             }
             name if self.timestamp0_zone.zone_of(name) => {
-                self.do_handle_request_timestamp(request, response, true).await
+                self.do_handle_request_timestamp(request, response, true)
+                    .await
             }
             name if self.root_zone.zone_of(name) => {
                 self.do_handle_request_rootzone(request, response).await
             }
-            
+
             name => Err(Error::InvalidZone(name.clone())),
         }
     }
