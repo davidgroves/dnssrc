@@ -152,7 +152,8 @@ For full support, I recommend installing at least version 3.2 from [knot-dns's g
 - EDNS Client Subnet
   - `kdig -d TXT edns-cs.dnssrc.fibrecat.org`
 - Manually sending EDNS CS Data.
-  - `kdig -d TXT edns-cs.dnssrc.fibrecat.org +edns-cs=127.0.0.1:53`
+  - `kdig -d TXT edns-cs.dnssrc.fibrecat.org +subnet=1.2.3.4/8`
+  - `kdig -d TXT edns-cs.dnssrc.fibrecat.org +subnet=2001:db8::3/64`
 
 # How to contribute.
 
