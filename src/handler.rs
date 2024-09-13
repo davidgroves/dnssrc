@@ -11,9 +11,9 @@ use std::{
     },
 };
 use tracing::*;
-use trust_dns_server::{
+use hickory_server::{
     authority::MessageResponseBuilder,
-    client::rr::{rdata::TXT, LowerName, Name, RData, Record},
+    proto::rr::{rdata::TXT, LowerName, Name, RData, Record},
     proto::{
         op::{Header, MessageType, OpCode, ResponseCode},
         rr::RecordType,
@@ -21,7 +21,7 @@ use trust_dns_server::{
     server::{Request, RequestHandler, ResponseHandler, ResponseInfo},
 };
 
-use trust_dns_proto::rr::rdata::soa::SOA;
+use hickory_server::proto::rr::rdata::soa::SOA;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -129,8 +129,8 @@ impl Handler {
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
         let rdata = match request.src().ip() {
-            IpAddr::V4(ipv4) => RData::A(ipv4),
-            IpAddr::V6(ipv6) => RData::AAAA(ipv6),
+            IpAddr::V4(ipv4) => RData::A(hickory_server::proto::rr::rdata::A(ipv4)),
+            IpAddr::V6(ipv6) => RData::AAAA(hickory_server::proto::rr::rdata::AAAA(ipv6)),
         };
         let records = vec![Record::from_rdata(
             request.query().name().into(),
@@ -281,14 +281,14 @@ impl Handler {
         let builder = MessageResponseBuilder::from_message_request(request);
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
-        let ednscs: Vec<u8> = request
+        let ednscs_option = request
             .edns()
             .unwrap()
             .options()
-            .get(trust_dns_server::proto::rr::rdata::opt::EdnsCode::Subnet)
-            .unwrap()
-            .into();
-
+            .get(hickory_server::proto::rr::rdata::opt::EdnsCode::Subnet)
+            .unwrap();
+         
+        let ednscs: Vec<u8> = ednscs_option;
         let net = parse_ednscs_subnet(ednscs);
         let rdata = RData::TXT(TXT::new(vec![net.to_string()]));
         let records = vec![Record::from_rdata(
@@ -315,13 +315,13 @@ impl Handler {
         header.set_authoritative(true);
 
         let rdata = match request.query().query_type() {
-            RecordType::A => RData::A(std::net::Ipv4Addr::new(
+            RecordType::A => RData::A(hickory_server::proto::rr::rdata::A(std::net::Ipv4Addr::new(
                 rand::thread_rng().gen(),
                 rand::thread_rng().gen(),
                 rand::thread_rng().gen(),
                 rand::thread_rng().gen(),
-            )),
-            RecordType::AAAA => RData::AAAA(std::net::Ipv6Addr::new(
+            ))),
+            RecordType::AAAA => RData::AAAA(hickory_server::proto::rr::rdata::AAAA(std::net::Ipv6Addr::new(
                 rand::thread_rng().gen(),
                 rand::thread_rng().gen(),
                 rand::thread_rng().gen(),
@@ -330,7 +330,7 @@ impl Handler {
                 rand::thread_rng().gen(),
                 rand::thread_rng().gen(),
                 rand::thread_rng().gen(),
-            )),
+            ))),
             RecordType::TXT => RData::TXT(TXT::new(vec![random_string])),
             _ => RData::TXT(TXT::new(vec![String::from(
                 "Unsupported RR type. Supported are A/AAAA/TXT",
@@ -359,7 +359,7 @@ impl Handler {
         if request.query().query_type().is_ns() {
             let mut rdatas = vec![];
             for ns_name in self.ns_names.clone().into_iter() {
-                rdatas.push(RData::NS(Name::from_str(&ns_name).unwrap()));
+                rdatas.push(RData::NS(hickory_server::proto::rr::rdata::NS(Name::from_str(&ns_name).unwrap())));
             }
             for rdata in rdatas {
                 records.push(Record::from_rdata(request.query().name().into(), 60, rdata))
