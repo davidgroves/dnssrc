@@ -55,16 +55,16 @@ pub struct Handler {
     pub soa_names: Vec<String>,
 }
 
-fn parse_ednscs_subnet(v: Vec<u8>) -> ipnet::IpNet {
-    let family = v[1];
-    let prefix_length = v[2];
+fn parse_ednscs_subnet(subnet: Vec<u8>) -> ipnet::IpNet {
+    let family = subnet[1];
+    let prefix_length = subnet[2];
 
     if family == 0 {
         // Spec say this shouldn't ever exist, but it does in the wild from some software.
         // I think the meaning is "I'm aware of EDNS-CS" but don't want to use it for this request.
         todo!()
     } else if family == 1 {
-        let mut x = v;
+        let mut x = subnet;
         x.resize(8, 0);
         let addr = ipnet::IpNet::new(
             std::net::IpAddr::V4(std::net::Ipv4Addr::new(x[4], x[5], x[6], x[7])),
@@ -73,7 +73,7 @@ fn parse_ednscs_subnet(v: Vec<u8>) -> ipnet::IpNet {
         .unwrap();
         return addr;
     } else if family == 2 {
-        let mut x = v;
+        let mut x = subnet;
         x.resize(20, 0);
         let x: Vec<u16> = x
             .chunks_exact(2)
@@ -88,7 +88,7 @@ fn parse_ednscs_subnet(v: Vec<u8>) -> ipnet::IpNet {
         .unwrap();
         return addr;
     } else {
-        todo!("Bad ednscs data: {:?}", v);
+        todo!("Bad ednscs data: {:?}", subnet);
     }
 }
 
@@ -116,7 +116,6 @@ impl Handler {
             ttl: options.ttl,
             ns_names: options.ns_records.clone(),
             soa_names: options.soa_names.clone(),
-            // hexdump_zone: LowerName::from(Name::from_str(&format!("hexdump.{domain}")).unwrap()),
         }
     }
 

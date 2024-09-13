@@ -74,7 +74,7 @@ to the binary, it will work as expected. To do this, run `setcap 'cap_net_bind_s
 - Listen on UDP port 53 for IPv4 on localhost only, and TCP port 443 for DNS over HTTPS on localhost only.
   - `dnssrc --domain mydomain.com --udp 127.1:53 --tcp6 [::1]:443  --foreground`
 
-## Optonal Extras
+## Optional Extras
  - You can specify the nameserver records to use for the base zone with the `--ns_records` option.
    - `dnssrc --domain mydomain.com --udp 127.0.0.1:53 --ns_records ns0.mydomain.com ns1.mydomain.com --foreground`
  - You can specify the SOA names and values with the `--soa_names` and `--soa_values` options.
@@ -89,8 +89,19 @@ you must provide valid certificates.
 
 You do so with the `--certfile` option to provide a PEM formatted certificate and `--keyfile` to provide a 4096 byte RSA key.
 
-The script `gen_certs.sh` will produce these files signed my a local certificate authority it will also
+The script `gen_certs.sh` will produce these files signed by a local certificate authority it will also
 produce in the `tls/` directory.
+
+## Getting a letsencrypt certificate.
+
+1. Install certbot from [lets-encrypt.org](https://letsencrypt.org/getting-started/) on your system.
+1. Create directories for certbot to use. `mkdir certs; mkdir certs/config; mkdir certs/work; mkdir certs/logs`
+1. Change to the `certs` directory with `cd certs`.
+1. Run `certbot certonly --manual --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory --agree-tos --email you@example.com --domains ns0.dnssrc.fibrecat.org --work-dir work/ --logs-dir logs/ --config-dir config/`
+1. Follow the instructions for configuring a TXT record on your domain, to prove you are a manager of it.
+1. Convert the PEM formatted certificate to a seperate CRT and KEY file with `openssl x509 -outform der -in certificate.pem -out certificate.crt; openssl rsa -outform `
+
+
 
 # Sending Queries to DNSSRC.
 
@@ -126,8 +137,8 @@ $ dig +short -p 1053 @127.0.0.1 myip.mydomain.com
 I strongly recommend the [kdig](https://www.knot-dns.cz/docs/latest/html/man_kdig.html) utility from the [knot-dns](https://www.knot-dns.cz/) team.
 
 To get all the features, you will likely have to build a modern version from source. The version that
-could be install from distribution packages on Ubuntu 23.10 didn't have edns-client-subnet support,
-nor support for DNS over QUIC.
+could be install from distribution packages on Ubuntu 24.04 and Debian 12 didn't have edns-client-subnet support,
+nor support for DNS over QUIC. Debian Unstable (sid) has support though in `knot-dnsutils`.
 
 For full support, I recommend installing at least version 3.2 from [knot-dns's github](https://github.com/CZ-NIC/knot), and when you configure it use `./configure --enable-quic=yes`
 
@@ -140,6 +151,8 @@ For full support, I recommend installing at least version 3.2 from [knot-dns's g
   - `kdig -d TXT edns.dnssrc.fibrecat.org`
 - EDNS Client Subnet
   - `kdig -d TXT edns-cs.dnssrc.fibrecat.org`
+- Manually sending EDNS CS Data.
+  - `kdig -d TXT edns-cs.dnssrc.fibrecat.org +edns-cs=127.0.0.1:53`
 
 # How to contribute.
 
@@ -155,3 +168,4 @@ intend to revist this as I learn the language more.
 
 - Background mode appears unreliable. More diagnosis needed.
 - The public version running at dnssrc.fibrecat.org does not support DNS over HTTPS at current time.
+- DNSSEC is not supported. The trust-dns library does not support dynamically signing records, and I'm not willing to implement this myself.
