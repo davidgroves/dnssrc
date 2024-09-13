@@ -1,4 +1,5 @@
 use anyhow::Result;
+use rustls::Certificate;
 use clap::Parser;
 use daemonize::Daemonize;
 use handler::Handler;
@@ -6,7 +7,7 @@ use options::Options;
 use privdrop::PrivDrop;
 use std::time::Duration;
 use tokio::net::{TcpListener, UdpSocket};
-use trust_dns_server::ServerFuture;
+use hickory_server::ServerFuture;
 
 mod handler;
 mod options;
@@ -18,7 +19,7 @@ extern "C" {
 
 pub fn read_cert(
     cert_path: &std::path::Path,
-) -> trust_dns_server::proto::error::ProtoResult<Vec<rustls::Certificate>> {
+) -> hickory_server::proto::error::ProtoResult<Vec<Certificate>> {
     let mut cert_file = std::fs::File::open(cert_path)
         .map_err(|e| format!("error opening cert file: {cert_path:?}: {e}"))?;
 
@@ -26,7 +27,7 @@ pub fn read_cert(
     if let Ok(certs) = rustls_pemfile::certs(&mut reader) {
         Ok(certs.into_iter().map(rustls::Certificate).collect())
     } else {
-        Err(trust_dns_server::proto::error::ProtoError::from(format!(
+        Err(hickory_server::proto::error::ProtoError::from(format!(
             "failed to read certs from: {}",
             cert_path.display()
         )))
@@ -35,7 +36,7 @@ pub fn read_cert(
 
 pub fn read_key(
     path: &std::path::Path,
-) -> trust_dns_server::proto::error::ProtoResult<rustls::PrivateKey> {
+) -> hickory_server::proto::error::ProtoResult<rustls::PrivateKey> {
     let mut file = std::io::BufReader::new(std::fs::File::open(path)?);
 
     loop {
@@ -87,7 +88,7 @@ async fn main() -> Result<()> {
                 read_cert(std::path::Path::new(&options.certfile.clone())).unwrap(),
                 read_key(std::path::Path::new(&options.keyfile.clone())).unwrap(),
             ),
-            options.domain.clone(),
+            Some(options.domain.clone()),
         );
     }
 
@@ -99,7 +100,7 @@ async fn main() -> Result<()> {
                 read_cert(std::path::Path::new(&options.certfile.clone())).unwrap(),
                 read_key(std::path::Path::new(&options.keyfile.clone())).unwrap(),
             ),
-            options.domain.clone(),
+            Some(options.domain.clone()),
         );
     }
 
@@ -133,7 +134,7 @@ async fn main() -> Result<()> {
                 read_cert(std::path::Path::new(&options.certfile.clone())).unwrap(),
                 read_key(std::path::Path::new(&options.keyfile.clone())).unwrap(),
             ),
-            options.domain.clone(),
+            Some(options.domain.clone()),
         );
     }
 
@@ -145,7 +146,7 @@ async fn main() -> Result<()> {
                 read_cert(std::path::Path::new(&options.certfile.clone())).unwrap(),
                 read_key(std::path::Path::new(&options.keyfile.clone())).unwrap(),
             ),
-            options.domain.clone(),
+            Some(options.domain.clone()),
         );
     }
 
