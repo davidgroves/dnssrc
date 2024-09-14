@@ -286,8 +286,10 @@ impl Handler {
             .unwrap()
             .options()
             .get(hickory_server::proto::rr::rdata::opt::EdnsCode::Subnet)
+            .unwrap()
+            .try_into()
             .unwrap();
-         
+            
         let ednscs: Vec<u8> = ednscs_option;
         let net = parse_ednscs_subnet(ednscs);
         let rdata = RData::TXT(TXT::new(vec![net.to_string()]));
