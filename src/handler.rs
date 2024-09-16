@@ -53,6 +53,11 @@ pub struct Handler {
     pub ttl: u32,
     pub ns_names: Vec<String>,
     pub soa_names: Vec<String>,
+    pub soa_serial: u32,
+    pub soa_refresh: i32,
+    pub soa_retry: i32,
+    pub soa_expire: i32,
+    pub soa_minimum: u32,
 }
 
 fn parse_ednscs_subnet(subnet: Vec<u8>) -> ipnet::IpNet {
@@ -116,6 +121,11 @@ impl Handler {
             ttl: options.ttl,
             ns_names: options.ns_records.clone(),
             soa_names: options.soa_names.clone(),
+            soa_serial: options.soa_values[0] as u32,
+            soa_refresh: options.soa_values[1] as i32,
+            soa_retry: options.soa_values[2] as i32,
+            soa_expire: options.soa_values[3] as i32,
+            soa_minimum: options.soa_values[4] as u32,
         }
     }
 
@@ -124,7 +134,6 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
         let builder = MessageResponseBuilder::from_message_request(request);
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
@@ -146,7 +155,6 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
         let builder = MessageResponseBuilder::from_message_request(request);
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
@@ -165,7 +173,6 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
         let builder = MessageResponseBuilder::from_message_request(request);
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
@@ -188,7 +195,6 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
         let builder = MessageResponseBuilder::from_message_request(request);
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
@@ -210,7 +216,7 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        let counter = self.counter.fetch_add(1, Ordering::SeqCst);
+        let counter: u64 = self.counter.fetch_or(0, Ordering::SeqCst);
         let builder = MessageResponseBuilder::from_message_request(request);
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
@@ -288,7 +294,7 @@ impl Handler {
             .get(hickory_server::proto::rr::rdata::opt::EdnsCode::Subnet)
             .unwrap()
             .try_into()
-            .unwrap();
+            .unwrap_or_default();
             
         let ednscs: Vec<u8> = ednscs_option;
         let net = parse_ednscs_subnet(ednscs);
@@ -371,11 +377,11 @@ impl Handler {
             let rdata = RData::SOA(SOA::new(
                 Name::from_str_relaxed(&self.soa_names[0]).unwrap(),
                 Name::from_str_relaxed(&self.soa_names[1]).unwrap(),
-                1000,
-                60,
-                60,
-                31356000,
-                0,
+                self.soa_serial,
+                self.soa_refresh,
+                self.soa_retry,
+                self.soa_expire,
+                self.soa_minimum,
             ));
             records = vec![Record::from_rdata(request.query().name().into(), 60, rdata)];
             response = builder.build(header, &records, &[], &[], &[]);
@@ -391,6 +397,7 @@ impl Handler {
         request: &Request,
         response: R,
     ) -> Result<ResponseInfo, Error> {
+        self.counter.fetch_add(1, Ordering::SeqCst);
         if request.op_code() != OpCode::Query {
             return Err(Error::InvalidOpCode(request.op_code()));
         }
