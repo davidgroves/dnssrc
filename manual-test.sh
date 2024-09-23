@@ -131,7 +131,7 @@ kdig +quic +short -p 8443 @::1 AAAA random.test.example.com
 echo "MANUAL TEST2: A UDP4 A query for random.test.example.com, should print a random IPv4 address under this line"
 kdig +quic +short -p 8443 @127.0.0.1 A random.test.example.com
 
-echo "MANUAL TEST3: A UDP4 TXT query for random.test.example.com, should print a random IPv4 string below this line"
+echo "MANUAL TEST3: A UDP4 TXT query for random.test.example.com, should print a random IPv4 string under this line"
 kdig +quic +short -p 8443 @127.0.0.1 TXT random.test.example.com
 
 echo ""
