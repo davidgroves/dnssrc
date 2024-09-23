@@ -2,15 +2,6 @@ use crate::Options;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 
-use std::{
-    net::IpAddr,
-    str::FromStr,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
-};
-use tracing::*;
 use hickory_server::{
     authority::MessageResponseBuilder,
     proto::rr::{rdata::TXT, LowerName, Name, RData, Record},
@@ -20,6 +11,15 @@ use hickory_server::{
     },
     server::{Request, RequestHandler, ResponseHandler, ResponseInfo},
 };
+use std::{
+    net::IpAddr,
+    str::FromStr,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+};
+use tracing::*;
 
 use hickory_server::proto::rr::rdata::soa::SOA;
 
@@ -50,6 +50,7 @@ pub struct Handler {
     pub ednscs_zone: LowerName,
     pub timestamp_zone: LowerName,
     pub timestamp0_zone: LowerName,
+    pub protocol_zone: LowerName,
     pub ttl: u32,
     pub ns_names: Vec<String>,
     pub soa_names: Vec<String>,
@@ -102,8 +103,8 @@ impl Handler {
     pub fn from_options(options: &Options) -> Self {
         let domain = &options.domain;
         Handler {
-            root_zone: LowerName::from(Name::from_str(domain).unwrap()),
             counter: Arc::new(AtomicU64::new(0)),
+            root_zone: LowerName::from(Name::from_str(domain).unwrap()),
             counter_zone: LowerName::from(Name::from_str(&format!("counter.{domain}")).unwrap()),
             myip_zone: LowerName::from(Name::from_str(&format!("myip.{domain}")).unwrap()),
             myport_zone: LowerName::from(Name::from_str(&format!("myport.{domain}")).unwrap()),
@@ -112,6 +113,7 @@ impl Handler {
             random_zone: LowerName::from(Name::from_str(&format!("random.{domain}")).unwrap()),
             edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap()),
             ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap()),
+            protocol_zone: LowerName::from(Name::from_str(&format!("protocol.{domain}")).unwrap()),
             timestamp_zone: LowerName::from(
                 Name::from_str(&format!("timestamp.{domain}")).unwrap(),
             ),
@@ -141,6 +143,35 @@ impl Handler {
             IpAddr::V4(ipv4) => RData::A(hickory_server::proto::rr::rdata::A(ipv4)),
             IpAddr::V6(ipv6) => RData::AAAA(hickory_server::proto::rr::rdata::AAAA(ipv6)),
         };
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
+        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        Ok(responder.send_response(response).await?)
+    }
+
+    async fn do_handle_request_protocol<R: ResponseHandler>(
+        &self,
+        request: &Request,
+        mut responder: R,
+    ) -> Result<ResponseInfo, Error> {
+        let builder = MessageResponseBuilder::from_message_request(request);
+        let mut header = Header::response_from_request(request.header());
+        header.set_authoritative(true);
+
+        let ipversion = if request.src().is_ipv4() {
+            "IPv4"
+        } else if request.src().is_ipv6() {
+            "IPv6"
+        } else {
+            "Unknown"
+        };
+
+        let rdata = RData::TXT(TXT::new(vec![
+            request.protocol().to_string() + " " + ipversion,
+        ]));
         let records = vec![Record::from_rdata(
             request.query().name().into(),
             self.ttl,
@@ -295,7 +326,7 @@ impl Handler {
             .unwrap()
             .try_into()
             .unwrap_or_default();
-            
+
         let ednscs: Vec<u8> = ednscs_option;
         let net = parse_ednscs_subnet(ednscs);
         let rdata = RData::TXT(TXT::new(vec![net.to_string()]));
@@ -323,22 +354,26 @@ impl Handler {
         header.set_authoritative(true);
 
         let rdata = match request.query().query_type() {
-            RecordType::A => RData::A(hickory_server::proto::rr::rdata::A(std::net::Ipv4Addr::new(
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-            ))),
-            RecordType::AAAA => RData::AAAA(hickory_server::proto::rr::rdata::AAAA(std::net::Ipv6Addr::new(
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-                rand::thread_rng().gen(),
-            ))),
+            RecordType::A => RData::A(hickory_server::proto::rr::rdata::A(
+                std::net::Ipv4Addr::new(
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                ),
+            )),
+            RecordType::AAAA => RData::AAAA(hickory_server::proto::rr::rdata::AAAA(
+                std::net::Ipv6Addr::new(
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                    rand::thread_rng().gen(),
+                ),
+            )),
             RecordType::TXT => RData::TXT(TXT::new(vec![random_string])),
             _ => RData::TXT(TXT::new(vec![String::from(
                 "Unsupported RR type. Supported are A/AAAA/TXT",
@@ -367,7 +402,9 @@ impl Handler {
         if request.query().query_type().is_ns() {
             let mut rdatas = vec![];
             for ns_name in self.ns_names.clone().into_iter() {
-                rdatas.push(RData::NS(hickory_server::proto::rr::rdata::NS(Name::from_str(&ns_name).unwrap())));
+                rdatas.push(RData::NS(hickory_server::proto::rr::rdata::NS(
+                    Name::from_str(&ns_name).unwrap(),
+                )));
             }
             for rdata in rdatas {
                 records.push(Record::from_rdata(request.query().name().into(), 60, rdata))
@@ -439,6 +476,12 @@ impl Handler {
                 self.do_handle_request_timestamp(request, response, true)
                     .await
             }
+            name if self.protocol_zone.zone_of(name) => {
+                debug!("Handling protocol request");
+                self.do_handle_request_protocol(request, response).await
+            }
+
+            // This must be the last check, it will match before and run.
             name if self.root_zone.zone_of(name) => {
                 self.do_handle_request_rootzone(request, response).await
             }

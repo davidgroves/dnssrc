@@ -1,13 +1,13 @@
 use anyhow::Result;
-use rustls::Certificate;
 use clap::Parser;
 use daemonize::Daemonize;
 use handler::Handler;
+use hickory_server::ServerFuture;
 use options::Options;
 use privdrop::PrivDrop;
+use rustls::Certificate;
 use std::time::Duration;
 use tokio::net::{TcpListener, UdpSocket};
-use hickory_server::ServerFuture;
 
 mod handler;
 mod options;
@@ -49,7 +49,6 @@ pub fn read_key(
         };
     }
 }
-
 
 #[tokio::main]
 async fn main() -> Result<()> {
