@@ -125,6 +125,7 @@ an example of the full name to use is `myip.dnssrc.fibrecat.org`
 | timestamp0 | TXT     | Returns the current timestamp, in milliseconds from unix epoch, when the server got the request. TTL is always set to zero. |
 | timestamp0 | TXT     | Returns the current timestamp, in milliseconds from unix epoch, when the server got the request. TTL is always set to zero. |
 | version    | TXT     | Returns the version of the software, as set at build time in Cargo.toml |
+| help       | TXT     | Prints this data in a concise TXT record | 
 
 
 
