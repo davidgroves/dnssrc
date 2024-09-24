@@ -171,6 +171,11 @@ Apologies for the less than simple instructions, but I'm trying to keep my inbox
 This is my first major bit of rust code, so it is likely to be somewhat non-ideomatic, and I
 intend to revist this as I learn the language more.
 
+### Integration testing.
+
+The shell script [manual-test.sh](manual-test.sh) runs integration tests manually. The code doesn't contain conventional unit tests, as
+the Hickory library is well tested, and almost all other useful testing is integration testing.
+
 # Known Bugs
 
 - Background mode appears unreliable. More diagnosis needed.
