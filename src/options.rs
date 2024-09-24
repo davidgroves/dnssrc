@@ -71,7 +71,7 @@ pub struct Options {
     #[clap(long, env = "DNSSRC_DOMAIN")]
     pub domain: String,
 
-    // Domain name.
+    // TTL
     #[clap(long, env = "DNSSRC_TTL", default_value = "1")]
     pub ttl: u32,
 
