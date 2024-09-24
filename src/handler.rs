@@ -230,7 +230,7 @@ impl Handler {
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
         let string_response = vec![
-            "Available queries are: myip/A/AAAA/TXT, myport/TXT, myaddr/ANY, counter/TXT, random/A/AAAA/TXT, edns/A/AAAA/TXT, ednscs/A/AAAA, timestamp/TXT, timestamp0/TXT, help/ANY".to_string()
+            "Available queries are: myip/A/AAAA/TXT, myport/TXT, myaddr/ANY, counter/TXT, random/A/AAAA/TXT, edns/A/AAAA/TXT, ednscs/A/AAAA, timestamp/TXT, timestamp0/TXT, help/ANY, protocol/TXT".to_string()
         ];
         let rdata = RData::TXT(TXT::new(string_response));
         let records = vec![Record::from_rdata(
