@@ -50,6 +50,7 @@ pub struct Handler {
     pub timestamp_zone: LowerName,
     pub timestamp0_zone: LowerName,
     pub protocol_zone: LowerName,
+    pub version_zone: LowerName,
     pub ttl: u32,
     pub ns_names: Vec<String>,
     pub soa_names: Vec<String>,
@@ -113,6 +114,7 @@ impl Handler {
             edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap()),
             ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap()),
             protocol_zone: LowerName::from(Name::from_str(&format!("protocol.{domain}")).unwrap()),
+            version_zone: LowerName::from(Name::from_str(&format!("version.{domain}")).unwrap()),
             timestamp_zone: LowerName::from(
                 Name::from_str(&format!("timestamp.{domain}")).unwrap(),
             ),
@@ -139,6 +141,26 @@ impl Handler {
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
         let rdata = RData::TXT(TXT::new(vec![request.src().ip().to_string()]));
+
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
+        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        Ok(responder.send_response(response).await?)
+    }
+
+    async fn do_handle_request_version<R: ResponseHandler>(
+        &self,
+        request: &Request,
+        mut responder: R,
+    ) -> Result<ResponseInfo, Error> {
+        let builder = MessageResponseBuilder::from_message_request(request);
+        let mut header = Header::response_from_request(request.header());
+        header.set_authoritative(true);
+        let version = option_env!("CARGO_PKG_VERSION").unwrap_or("unknown");
+        let rdata = RData::TXT(TXT::new(vec![version.to_string()]));
 
         let records = vec![Record::from_rdata(
             request.query().name().into(),
@@ -225,7 +247,7 @@ impl Handler {
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
         let string_response = vec![
-            "Available queries are: myip/TXT, myport/TXT, myaddr/TXT, counter/TXT, random/A/AAAA/TXT, ednsTXT, edns-cs/TXT, timestamp/TXT, timestamp0/TXT, help/TXT, protocol/TXT".to_string()
+            "Available queries are: myip/TXT, myport/TXT, myaddr/TXT, counter/TXT, random/A/AAAA/TXT, ednsTXT, edns-cs/TXT, timestamp/TXT, timestamp0/TXT, help/TXT, protocol/TXT, version/TXT".to_string()
         ];
         let rdata = RData::TXT(TXT::new(string_response));
         let records = vec![Record::from_rdata(
@@ -441,6 +463,9 @@ impl Handler {
         match request.query().name() {
             name if self.myip_zone.zone_of(name) => {
                 self.do_handle_request_myip(request, response).await
+            }
+            name if self.version_zone.zone_of(name) => {
+                self.do_handle_request_version(request, response).await
             }
             name if self.myport_zone.zone_of(name) => {
                 self.do_handle_request_myport(request, response).await
