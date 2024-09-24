@@ -139,10 +139,8 @@ impl Handler {
         let builder = MessageResponseBuilder::from_message_request(request);
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
-        let rdata = match request.src().ip() {
-            IpAddr::V4(ipv4) => RData::A(hickory_server::proto::rr::rdata::A(ipv4)),
-            IpAddr::V6(ipv6) => RData::AAAA(hickory_server::proto::rr::rdata::AAAA(ipv6)),
-        };
+        let rdata = RData::TXT(TXT::new(vec![request.src().ip().to_string()]));
+
         let records = vec![Record::from_rdata(
             request.query().name().into(),
             self.ttl,
@@ -230,7 +228,7 @@ impl Handler {
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
         let string_response = vec![
-            "Available queries are: myip/A/AAAA/TXT, myport/TXT, myaddr/ANY, counter/TXT, random/A/AAAA/TXT, edns/A/AAAA/TXT, ednscs/A/AAAA, timestamp/TXT, timestamp0/TXT, help/ANY, protocol/TXT".to_string()
+            "Available queries are: myip/TXT, myport/TXT, myaddr/TXT, counter/TXT, random/A/AAAA/TXT, ednsTXT, edns-cs/TXT, timestamp/TXT, timestamp0/TXT, help/TXT, protocol/TXT".to_string()
         ];
         let rdata = RData::TXT(TXT::new(string_response));
         let records = vec![Record::from_rdata(
