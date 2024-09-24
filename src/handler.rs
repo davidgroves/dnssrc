@@ -12,7 +12,6 @@ use hickory_server::{
     server::{Request, RequestHandler, ResponseHandler, ResponseInfo},
 };
 use std::{
-    net::IpAddr,
     str::FromStr,
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -159,12 +158,10 @@ impl Handler {
         let mut header = Header::response_from_request(request.header());
         header.set_authoritative(true);
 
-        let ipversion = if request.src().is_ipv4() {
-            "IPv4"
-        } else if request.src().is_ipv6() {
-            "IPv6"
-        } else {
-            "Unknown"
+        let ipversion = match request.src() {
+            addr if addr.is_ipv4() => "IPv4",
+            addr if addr.is_ipv6() => "IPv6",
+            _ => "Unknown",
         };
 
         let rdata = RData::TXT(TXT::new(vec![
