@@ -16,28 +16,28 @@ dnssrc --domain test.example.com --udp 127.0.0.1:1053 --tcp 127.0.0.1:1053 \
 sleep 1
 
 echo "TEST1: A UDP4 query for myip.test.example.com"
-EXPECTED="127.0.0.1"
+EXPECTED='"127.0.0.1"'
 VALUE=`kdig +short -p 1053 @127.0.0.1 A myip.test.example.com ` 
 if [ "$VALUE" != "$EXPECTED" ]; then
     echo "*** TEST1 FAILED: Expected $EXPECTED, got $VALUE"
 fi
 
 echo "TEST2: A UDP4 query for myip.test.example.com"
-EXPECTED="::1"
+EXPECTED='"::1"'
 VALUE=`kdig +short -p 1053 @::1 AAAA myip.test.example.com`
 if [ "$VALUE" != "$EXPECTED" ]; then
     echo "*** TEST2 FAILED: Expected $EXPECTED, got $VALUE"
 fi
 
 echo "TEST3: A TCP4 query for myip.test.example.com"
-EXPECTED="127.0.0.1"
+EXPECTED='"127.0.0.1"'
 VALUE=`kdig +tcp +short -p 1053 @127.0.0.1 A myip.test.example.com`
 if [ "$VALUE" != "$EXPECTED" ]; then
     echo "*** TEST3 FAILED: Expected $EXPECTED, got $VALUE"
 fi
 
 echo "TEST4: A TCP6 query for myip.test.example.com"
-EXPECTED="::1"
+EXPECTED='"::1"'
 VALUE=`kdig +tcp +short -p 1053 @::1 AAAA myip.test.example.com`
 if [ "$VALUE" != "$EXPECTED" ]; then
     echo "*** TEST4 FAILED: Expected $EXPECTED, got $VALUE"
@@ -85,7 +85,7 @@ if [ "$VALUE" != "$EXPECTED" ]; then
     echo "*** TEST10 FAILED: Expected $EXPECTED, got $VALUE"
 fi
 
-echo "TEST11: A UDP6 AAAA query for edns-cs.test.example.com, but with IPv4 in the EDNS-CS Optionm"
+echo "TEST11: A UDP6 AAAA query for edns-cs.test.example.com, but with IPv4 in the EDNS-CS Option"
 EXPECTED='"192.0.2.0/24"'
 VALUE=`kdig +short +subnet="192.0.2.100/24" -p 1053 @::1 AAAA edns-cs.test.example.com`
 if [ "$VALUE" != "$EXPECTED" ]; then
@@ -93,14 +93,14 @@ if [ "$VALUE" != "$EXPECTED" ]; then
 fi
 
 echo "TEST12: A UDP HTTP/3 (QUIC) A query for myip.test.example.com"
-EXPECTED='127.0.0.1'
+EXPECTED='"127.0.0.1"'
 VALUE=`kdig +quic +short -p 8443 @127.0.0.1 A myip.test.example.com`
 if [ "$VALUE" != "$EXPECTED" ]; then
     echo "*** TEST12 FAILED: Expected $EXPECTED, got $VALUE"
 fi
 
 echo "TEST13: A UDP6 HTTP/3 (QUIC) AAAA query for myip.test.example.com"
-EXPECTED='::1'
+EXPECTED='"::1"'
 VALUE=`kdig +quic +short -p 8443 @::1 AAAA myip.test.example.com`
 if [ "$VALUE" != "$EXPECTED" ]; then
     echo "*** TEST13 FAILED: Expected $EXPECTED, got $VALUE"
@@ -131,7 +131,7 @@ kdig +quic +short -p 8443 @::1 AAAA random.test.example.com
 echo "MANUAL TEST2: A UDP4 A query for random.test.example.com, should print a random IPv4 address under this line"
 kdig +quic +short -p 8443 @127.0.0.1 A random.test.example.com
 
-echo "MANUAL TEST3: A UDP4 TXT query for random.test.example.com, should print a random IPv4 string under this line"
+echo "MANUAL TEST3: A UDP4 TXT query for random.test.example.com, should print a random text string under this line"
 kdig +quic +short -p 8443 @127.0.0.1 TXT random.test.example.com
 
 echo ""
