@@ -23,6 +23,8 @@ This tool was originally written in Perl, but has been rewritten in Rust for eas
 I run a public instance at `dnssrc.fibrecat.org`. Your needs may be met by simply using it. If you 
 do not feel the need to run a local instance of the server, skip to the [Sending Queries](#Sending-Queries-to-DNSSRC.) section.
 
+The public version exposes the traditional DNS protocol via IPv4/UDP+TCP and IPv6/UDP+TCP. I hope in the future to run an instance that exposes DoH, DoT and QUIC, but at present I cannot do this. If you need these features you will need to host your own.
+
 ## How to Build.
 
 If you have a working Rust environment, with a minimum Rust version of 1.64, you should be able to produce
@@ -112,7 +114,7 @@ an example of the full name to use is `myip.dnssrc.fibrecat.org`
 
 | Name      | Type    | Purpose                                                                       |
 |---------  |---------|-------------------------------------------------------------------------------|
-| myip      | A/AAAA  | Returns an A or AAAA record, of the source address of the incoming request.   |
+| myip      | TXT     | Returns the IP address of the incoming DNS request                            |
 | myport    | TXT     | Returns a TXT record with the source port of the incoming request.            |
 | myaddr    | TXT     | Returns two TXT records, with both the source address and the source port.    |
 | counter   | TXT     | Returns a counter that is incremented once with each request served.          |
@@ -121,6 +123,10 @@ an example of the full name to use is `myip.dnssrc.fibrecat.org`
 | edns-cs   | TXT     | Returns the EDNS-Client-Subnet option on the incoming request.                |
 | timestamp | TXT     | Returns the current timestamp, in milliseconds from unix epoch, when the server got the request. TTL is still respected. |
 | timestamp0 | TXT     | Returns the current timestamp, in milliseconds from unix epoch, when the server got the request. TTL is always set to zero. |
+| timestamp0 | TXT     | Returns the current timestamp, in milliseconds from unix epoch, when the server got the request. TTL is always set to zero. |
+| version    | TXT     | Returns the version of the software, as set at build time in Cargo.toml |
+| help       | TXT     | Prints this data in a concise TXT record | 
+
 
 
 For example, if you invoked `dnssrc` running on 127.0.0.1:1053 for UDP requests with 
@@ -164,6 +170,11 @@ Apologies for the less than simple instructions, but I'm trying to keep my inbox
 
 This is my first major bit of rust code, so it is likely to be somewhat non-ideomatic, and I
 intend to revist this as I learn the language more.
+
+### Integration testing.
+
+The shell script [manual-test.sh](manual-test.sh) runs integration tests manually. The code doesn't contain conventional unit tests, as
+the Hickory library is well tested, and almost all other useful testing is integration testing.
 
 # Known Bugs
 
