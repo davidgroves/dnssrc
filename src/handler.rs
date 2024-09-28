@@ -102,11 +102,11 @@ impl Handler {
             counter_zone: LowerName::from(Name::from_str(&format!("counter.{domain}")).unwrap()),
             myip_zone: LowerName::from(Name::from_str(&format!("myip.{domain}")).unwrap()),
             myport_zone: LowerName::from(Name::from_str(&format!("myport.{domain}")).unwrap()),
-            myaddr_zone: LowerName::from(Name::from_str(&format!("myaddr.{domain}")).unwrap()),
-            help_zone: LowerName::from(Name::from_str(&format!("help.{domain}")).unwrap()),
-            random_zone: LowerName::from(Name::from_str(&format!("random.{domain}")).unwrap()),
-            edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap()),
-            ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap()),
+            myaddr_zone: LowerName::from(Name::from_str(&format!("myaddr.{domain}")).unwrap())),
+            help_zone: LowerName::from(Name::from_str(&format!("help.{domain}")).unwrap())),
+            random_zone: LowerName::from(Name::from_str(&format!("random.{domain}")).unwrap())),
+            edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap())),
+            ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap())),
             timestamp_zone: LowerName::from(
                 Name::from_str(&format!("timestamp.{domain}")).unwrap(),
             ),
@@ -119,25 +119,34 @@ impl Handler {
         }
     }
 
+    async fn increment_counter(&self) {
+        self.counter.fetch_add(1, Ordering::SeqCst);
+    }
+
+    fn build_response(&self, request: &Request, records: Vec<Record>) -> MessageResponse {
+        let builder = MessageResponseBuilder::from_message_request(request);
+        let mut header = Header::response_from_request(request.header());
+        header.set_authoritative(true);
+        builder.build(header, records.iter(), &[], &[], &[])
+    }
+
+    fn create_records(&self, request: &Request, rdata: RData, ttl: Option<u32>) -> Vec<Record> {
+        let ttl = ttl.unwrap_or(self.ttl);
+        vec![Record::from_rdata(request.query().name().into(), ttl, rdata)]
+    }
+
     async fn do_handle_request_myip<R: ResponseHandler>(
         &self,
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
+        self.increment_counter().await;
         let rdata = match request.src().ip() {
             IpAddr::V4(ipv4) => RData::A(hickory_server::proto::rr::rdata::A(ipv4)),
             IpAddr::V6(ipv6) => RData::AAAA(hickory_server::proto::rr::rdata::AAAA(ipv6)),
         };
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let records = self.create_records(request, rdata, None);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -146,17 +155,10 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
+        self.increment_counter().await;
         let rdata = RData::TXT(TXT::new(vec![request.src().port().to_string()]));
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let records = self.create_records(request, rdata, None);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -165,21 +167,14 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
+        self.increment_counter().await;
         let string_response = vec![
             request.src().ip().to_string(),
             request.src().port().to_string(),
         ];
         let rdata = RData::TXT(TXT::new(string_response));
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let records = self.create_records(request, rdata, None);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -188,20 +183,13 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        self.counter.fetch_add(1, Ordering::SeqCst);
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
+        self.increment_counter().await;
         let string_response = vec![
             "Available queries are: myip/A/AAAA/TXT, myport/TXT, myaddr/ANY, counter/TXT, random/A/AAAA/TXT, edns/A/AAAA/TXT, ednscs/A/AAAA, timestamp/TXT, timestamp0/TXT, help/ANY".to_string()
         ];
         let rdata = RData::TXT(TXT::new(string_response));
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let records = self.create_records(request, rdata, None);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -211,16 +199,9 @@ impl Handler {
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
         let counter = self.counter.fetch_add(1, Ordering::SeqCst);
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
         let rdata = RData::TXT(TXT::new(vec![counter.to_string()]));
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let records = self.create_records(request, rdata, None);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -230,9 +211,6 @@ impl Handler {
         mut responder: R,
         ttlzero: bool,
     ) -> Result<ResponseInfo, Error> {
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
         let start = std::time::SystemTime::now();
         let since_the_epoch = start
             .duration_since(std::time::UNIX_EPOCH)
@@ -241,16 +219,9 @@ impl Handler {
         let str_timestamp = format!("{}", timestamp);
         let rdata = RData::TXT(TXT::new(vec![str_timestamp]));
         println!("{}", request.query().name().base_name());
-        let ttl = match ttlzero {
-            true => 0,
-            false => self.ttl,
-        };
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let ttl = if ttlzero { Some(0) } else { None };
+        let records = self.create_records(request, rdata, ttl);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -259,17 +230,10 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
         let edns = request.edns().unwrap();
-        header.set_authoritative(true);
         let rdata = RData::TXT(TXT::new(vec![edns.to_string()]));
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let records = self.create_records(request, rdata, None);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -278,9 +242,6 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
         let ednscs_option = request
             .edns()
             .unwrap()
@@ -293,12 +254,8 @@ impl Handler {
         let ednscs: Vec<u8> = ednscs_option;
         let net = parse_ednscs_subnet(ednscs);
         let rdata = RData::TXT(TXT::new(vec![net.to_string()]));
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let records = self.create_records(request, rdata, None);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -312,9 +269,6 @@ impl Handler {
             .take(30)
             .map(char::from)
             .collect();
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
 
         let rdata = match request.query().query_type() {
             RecordType::A => RData::A(hickory_server::proto::rr::rdata::A(std::net::Ipv4Addr::new(
@@ -339,12 +293,8 @@ impl Handler {
             )])),
         };
 
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
+        let records = self.create_records(request, rdata, None);
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
@@ -353,9 +303,6 @@ impl Handler {
         request: &Request,
         mut responder: R,
     ) -> Result<ResponseInfo, Error> {
-        let header = Header::response_from_request(request.header());
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let response;
         let mut records = vec![];
 
         if request.query().query_type().is_ns() {
@@ -366,7 +313,6 @@ impl Handler {
             for rdata in rdatas {
                 records.push(Record::from_rdata(request.query().name().into(), 60, rdata))
             }
-            response = builder.build(header, &records, &[], &[], &[]);
         } else if request.query().query_type().is_soa() {
             let rdata = RData::SOA(SOA::new(
                 Name::from_str_relaxed(&self.soa_names[0]).unwrap(),
@@ -378,11 +324,9 @@ impl Handler {
                 0,
             ));
             records = vec![Record::from_rdata(request.query().name().into(), 60, rdata)];
-            response = builder.build(header, &records, &[], &[], &[]);
-        } else {
-            response = builder.build(header, &[], &[], &[], &[]);
         }
 
+        let response = self.build_response(request, records);
         Ok(responder.send_response(response).await?)
     }
 
