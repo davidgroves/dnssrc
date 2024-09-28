@@ -71,7 +71,7 @@ pub struct Options {
     #[clap(long, env = "DNSSRC_DOMAIN")]
     pub domain: String,
 
-    // TTL
+    // Domain name.
     #[clap(long, env = "DNSSRC_TTL", default_value = "1")]
     pub ttl: u32,
 
@@ -108,14 +108,6 @@ pub struct Options {
     pub soa_names: Vec<String>,
 
     // SOA Values
-    #[clap(
-        long,
-        env = "SOA_VALUES",
-        default_value = "1 60 60 31356000 0",
-        num_args = 5,
-        value_delimiter = ' ',
-        default_value("1 60 60 86400 86400"),
-        required = false
-    )]
-    pub soa_values: Vec<i64>,
+    #[clap(long, env = "SOA_VALUES", default_value = "1 60 60 31356000 0", num_args = 5, value_delimiter = ' ', default_value("1 60 60 86400 86400"), required = false)]
+    pub soa_values: Vec<u32>,
 }

@@ -5,5 +5,3 @@
 Cargo.lock
 
 **/*.rs.bk
-
-vendor/
