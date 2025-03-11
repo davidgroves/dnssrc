@@ -210,35 +210,6 @@ impl Handler {
         Ok(responder.send_response(response).await?)
     }
 
-    async fn do_handle_request_cookie<R: ResponseHandler>(
-        &self,
-        request: &Request,
-        mut responder: R,
-    ) -> Result<ResponseInfo, Error> {
-        let builder = MessageResponseBuilder::from_message_request(request);
-        let mut header = Header::response_from_request(request.header());
-        header.set_authoritative(true);
-        let ednscs_option = request
-            .edns()
-            .unwrap()
-            .options()
-            .get(hickory_server::proto::rr::rdata::opt::EdnsCode::Cookie)
-            .unwrap()
-            .try_into()
-            .unwrap_or_default();
-
-        let ednscs: Vec<u8> = ednscs_option;
-        let net = parse_ednscs_subnet(ednscs);
-        let rdata = RData::TXT(TXT::new(vec![net.to_string()]));
-        let records = vec![Record::from_rdata(
-            request.query().name().into(),
-            self.ttl,
-            rdata,
-        )];
-        let response = builder.build(header, records.iter(), &[], &[], &[]);
-        Ok(responder.send_response(response).await?)
-    }
-
     async fn do_handle_request_counter<R: ResponseHandler>(
         &self,
         request: &Request,
@@ -302,6 +273,28 @@ impl Handler {
         let rdata = RData::TXT(TXT::new(vec![net.to_string()]));
         let records = self.create_records(request, rdata, None);
         let response = self.build_response(request, records);
+        Ok(responder.send_response(response).await?)
+    }
+
+    async fn do_handle_request_cookie<R: ResponseHandler>(
+        &self,
+        request: &Request,
+        mut responder: R,
+    ) -> Result<ResponseInfo, Error> {
+        let builder = MessageResponseBuilder::from_message_request(request);
+        let mut header = Header::response_from_request(request.header());
+        header.set_authoritative(true);
+        
+        // Extract the DNS cookie from the EDNS options
+        let cookie_option = request.edns().unwrap().options().get(hickory_server::proto::rr::rdata::opt::EdnsCode::Cookie);
+        trace!("Cookie option: {:?}", cookie_option);
+        let cookie = cookie_option.map_or_else(|| String::new(), |opt| format!("{:?}", opt));
+        
+        let rdata = RData::TXT(TXT::new(vec![cookie]));
+        let records = vec![Record::from_rdata(request.query().name().into(), self.ttl, rdata)];
+        
+        // Build and send the response
+        let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
 
