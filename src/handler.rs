@@ -50,6 +50,12 @@ pub struct Handler {
     pub ednscs_zone: LowerName,
     pub timestamp_zone: LowerName,
     pub timestamp0_zone: LowerName,
+<<<<<<< HEAD
+=======
+    pub protocol_zone: LowerName,
+    pub version_zone: LowerName,
+    pub cookie_zone: LowerName,
+>>>>>>> 66216dd (Added cookie support)
     pub ttl: u32,
     pub ns_names: Vec<String>,
     pub soa_names: Vec<String>,
@@ -102,11 +108,22 @@ impl Handler {
             counter_zone: LowerName::from(Name::from_str(&format!("counter.{domain}")).unwrap()),
             myip_zone: LowerName::from(Name::from_str(&format!("myip.{domain}")).unwrap()),
             myport_zone: LowerName::from(Name::from_str(&format!("myport.{domain}")).unwrap()),
+<<<<<<< HEAD
             myaddr_zone: LowerName::from(Name::from_str(&format!("myaddr.{domain}")).unwrap())),
             help_zone: LowerName::from(Name::from_str(&format!("help.{domain}")).unwrap())),
             random_zone: LowerName::from(Name::from_str(&format!("random.{domain}")).unwrap())),
             edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap())),
             ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap())),
+=======
+            myaddr_zone: LowerName::from(Name::from_str(&format!("myaddr.{domain}")).unwrap()),
+            help_zone: LowerName::from(Name::from_str(&format!("help.{domain}")).unwrap()),
+            cookie_zone: LowerName::from(Name::from_str(&format!("cookie.{domain}")).unwrap()),
+            random_zone: LowerName::from(Name::from_str(&format!("random.{domain}")).unwrap()),
+            edns_zone: LowerName::from(Name::from_str(&format!("edns.{domain}")).unwrap()),
+            ednscs_zone: LowerName::from(Name::from_str(&format!("edns-cs.{domain}")).unwrap()),
+            protocol_zone: LowerName::from(Name::from_str(&format!("protocol.{domain}")).unwrap()),
+            version_zone: LowerName::from(Name::from_str(&format!("version.{domain}")).unwrap()),
+>>>>>>> 66216dd (Added cookie support)
             timestamp_zone: LowerName::from(
                 Name::from_str(&format!("timestamp.{domain}")).unwrap(),
             ),
@@ -190,6 +207,35 @@ impl Handler {
         let rdata = RData::TXT(TXT::new(string_response));
         let records = self.create_records(request, rdata, None);
         let response = self.build_response(request, records);
+        Ok(responder.send_response(response).await?)
+    }
+
+    async fn do_handle_request_cookie<R: ResponseHandler>(
+        &self,
+        request: &Request,
+        mut responder: R,
+    ) -> Result<ResponseInfo, Error> {
+        let builder = MessageResponseBuilder::from_message_request(request);
+        let mut header = Header::response_from_request(request.header());
+        header.set_authoritative(true);
+        let ednscs_option = request
+            .edns()
+            .unwrap()
+            .options()
+            .get(hickory_server::proto::rr::rdata::opt::EdnsCode::Cookie)
+            .unwrap()
+            .try_into()
+            .unwrap_or_default();
+
+        let ednscs: Vec<u8> = ednscs_option;
+        let net = parse_ednscs_subnet(ednscs);
+        let rdata = RData::TXT(TXT::new(vec![net.to_string()]));
+        let records = vec![Record::from_rdata(
+            request.query().name().into(),
+            self.ttl,
+            rdata,
+        )];
+        let response = builder.build(header, records.iter(), &[], &[], &[]);
         Ok(responder.send_response(response).await?)
     }
 
@@ -358,6 +404,9 @@ impl Handler {
             }
             name if self.help_zone.zone_of(name) => {
                 self.do_handle_request_help(request, response).await
+            }
+            name if self.cookie_zone.zone_of(name) => {
+                self.do_handle_request_cookie(request, response).await
             }
             name if self.random_zone.zone_of(name) => {
                 self.do_handle_request_random(request, response).await
